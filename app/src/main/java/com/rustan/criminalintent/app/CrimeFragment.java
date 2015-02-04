@@ -5,6 +5,7 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -26,11 +27,16 @@ public class CrimeFragment extends Fragment {
     public static final String EXTRA_CRIME_ID =
             "com.rustan.criminalintent.app.crime_id";
     private static final int REQUEST_DATE = 0;
+    private static final int REQUEST_PHOTO = 1;
+    private static final String TAG = "CrimeFragment";
     private Crime mCrime;
     private EditText mTitleField;
     private Button mDateButton;
     private CheckBox mSolvedCheckBox;
     private ImageButton mPhotoButton;
+    private ImageView mPhotoView;
+    private static final String DIALOG_IMAGE = "image";
+
 
     public static CrimeFragment newInstance(UUID crimeId) {
         Bundle args = new Bundle();
@@ -53,6 +59,22 @@ public class CrimeFragment extends Fragment {
 
     public void updateDate() {
         mDateButton.setText(mCrime.getDate().toString());
+    }
+    private void showPhoto() {
+// Назначение изображения, полученного на основе фотографии
+        Photo p = mCrime.getPhoto();
+        BitmapDrawable b = null;
+        if (p != null) {
+            String path = getActivity()
+                    .getFileStreamPath(p.getFilename()).getAbsolutePath();
+            b = PictureUtils.getScaledDrawable(getActivity(), path);
+        }
+        mPhotoView.setImageDrawable(b);
+    }
+    @Override
+    public void onStart() {
+        super.onStart();
+        showPhoto();
     }
 
     @TargetApi(11)
@@ -107,7 +129,22 @@ public class CrimeFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 Intent i = new Intent(getActivity(), CrimeCameraActivity.class);
-                startActivity(i);
+
+                startActivityForResult(i, REQUEST_PHOTO);
+            }
+        });
+        mPhotoView = (ImageView)v.findViewById(R.id.crime_imageView);
+        mPhotoView.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                Photo p = mCrime.getPhoto();
+                if (p == null)
+                    return;
+                FragmentManager fm = getActivity()
+                        .getSupportFragmentManager();
+                String path = getActivity()
+                        .getFileStreamPath(p.getFilename()).getAbsolutePath();
+                ImageFragment.newInstance(path)
+                        .show(fm, DIALOG_IMAGE);
             }
         });
         // Если камера недоступна
@@ -116,6 +153,7 @@ public class CrimeFragment extends Fragment {
                 !pm.hasSystemFeature(PackageManager.FEATURE_CAMERA_FRONT)) {
             mPhotoButton.setEnabled(false);
         }
+
         return v;
     }
 
@@ -134,17 +172,29 @@ public class CrimeFragment extends Fragment {
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (resultCode != Activity.RESULT_OK) return;
         if (requestCode == REQUEST_DATE) {
-            Date date = (Date) data
-                    .getSerializableExtra(DatePickerFragment.EXTRA_DATE);
+            Date date = (Date)data.getSerializableExtra(DatePickerFragment.EXTRA_DATE);
             mCrime.setDate(date);
-//            mDateButton.setText(mCrime.getDate().toString());
             updateDate();
+        } else if (requestCode == REQUEST_PHOTO) {
+            // создаем новый обьект Photo и присоединяем к Crime
+            String filename = data
+                    .getStringExtra(CrimeCameraFragment.EXTRA_PHOTO_FILENAME);
+            if (filename != null) {
+                Photo p = new Photo(filename);
+                mCrime.setPhoto(p);
+                showPhoto();
+            }
         }
     }
     @Override
     public void onPause() {
         super.onPause();
         CrimeLab.get(getActivity()).saveCrimes();
+    }
+    @Override
+    public void onStop() {
+        super.onStop();
+        PictureUtils.cleanImageView(mPhotoView);
     }
 
 
