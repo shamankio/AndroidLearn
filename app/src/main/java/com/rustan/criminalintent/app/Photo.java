@@ -12,7 +12,7 @@ public class Photo implements Serializable {
 
     private String mFilename;
 
-    /** create a Photo representing an existing file on disk */
+
     public Photo(String filename) {
         mFilename = filename;
     }

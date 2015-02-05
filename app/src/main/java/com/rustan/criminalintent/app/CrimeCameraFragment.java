@@ -23,7 +23,7 @@ import java.util.UUID;
 public class CrimeCameraFragment extends Fragment {
     private static final String TAG = "CrimeCameraFragment";
 
-    public static final String EXTRA_PHOTO_FILENAME = "com.rustan.criminalintent.app.filename";
+    public static final String EXTRA_PHOTO_FILENAME = "CrimeCameraFragment.filename";
 
     private Camera mCamera;
     private SurfaceView mSurfaceView;
